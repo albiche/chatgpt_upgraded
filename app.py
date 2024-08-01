@@ -1,6 +1,7 @@
 import streamlit as st
 from utils.file_processing import extract_text_from_files
 from utils.gpt_interaction import generate_response
+import base64
 
 # Interface utilisateur avec Streamlit
 st.title("ChatGPT Augmenté avec Téléchargement de Documents")
@@ -19,8 +20,8 @@ role_options = [
     "médecin",
     "avocat",
     "expert technique",
-    "conseiller en finance",
     "professeur",
+    "conseiller financier",
     "Autre"
 ]
 selected_role = st.selectbox("Sélectionnez le rôle de l'IA", role_options)
@@ -29,6 +30,20 @@ if selected_role == "Autre":
     custom_role = st.text_input("Veuillez spécifier le rôle souhaité")
     if custom_role:
         selected_role = custom_role
+
+# Sélecteur de format de sortie
+format_options = ["md", "txt", "pynb", "py", "Autre"]
+selected_format = st.selectbox("Sélectionnez le format de sortie", format_options)
+
+if selected_format == "Autre":
+    custom_format = st.text_input("Veuillez spécifier le format souhaité")
+    if custom_format:
+        selected_format = custom_format
+
+# Vérifier la validité du format
+valid_formats = {"md", "txt", "pynb", "py"}
+if selected_format not in valid_formats and selected_format != custom_format:
+    st.error("Format non valide. Veuillez entrer un format valide.")
 
 # Zone de téléchargement de fichiers
 uploaded_files = st.file_uploader("Glissez-déposez des fichiers ici ou cliquez pour télécharger", accept_multiple_files=True)
@@ -40,5 +55,11 @@ if uploaded_files:
 # Zone de chat
 user_input = st.text_input("Vous :")
 if user_input:
-    response = generate_response(user_input, context, selected_model, selected_max_tokens, selected_role)
+    response = generate_response(user_input, context, selected_model, selected_max_tokens, selected_role, selected_format)
     st.text_area("ChatGPT :", value=response, height=200)
+
+    # Option pour télécharger la réponse
+    if st.button("Télécharger la réponse"):
+        b64 = base64.b64encode(response.encode()).decode()  # encodage de la réponse en base64
+        href = f'<a href="data:file/{selected_format};base64,{b64}" download="response.{selected_format}">Télécharger {selected_format}</a>'
+        st.markdown(href, unsafe_allow_html=True)
